@@ -1,0 +1,49 @@
+name: Extract website archive
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract zip
+        run: |
+          set -e
+          if [ ! -f agency-site.zip ]; then
+            echo "agency-site.zip not found"
+            exit 0
+          fi
+
+          mkdir -p extracted
+          unzip -o -q agency-site.zip -d extracted
+
+          if [ -d extracted/agency-site ]; then
+            shopt -s dotglob
+            cp -a extracted/agency-site/* .
+          else
+            shopt -s dotglob
+            cp -a extracted/* .
+          fi
+
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Extract website archive"
+          git push
